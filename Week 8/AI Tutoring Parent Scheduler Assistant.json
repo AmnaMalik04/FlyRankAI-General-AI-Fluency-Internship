@@ -1,0 +1,2090 @@
+{
+  "name": "AI Tutoring Parent Scheduler Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "Label_8540221911810259581"
+          ],
+          "q": "label:Tutoring -label:Processed-by-Agent"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fd911a97-98fd-4408-be54-357752fa9beb",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        208
+      ],
+      "id": "76d8b304-b164-4370-abf1-6b679e517a1a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zw56aFZ0wQl80Ei3",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "12676c5f-faf6-4851-9df3-af5b948699ac",
+      "name": "Get a message",
+      "webhookId": "94db7744-b750-4663-894a-02dca2f5e854",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"is_schedule_change\": {\n      \"type\": \"boolean\"\n    },\n    \"student_name\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"parent_email\":{\n      \"type\": [\"string\", \"null\"]\n    },\n    \"original_date\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"original_time\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"requested_date\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"requested_time\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"reason\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"request_type\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"is_schedule_change\",\n    \"student_name\",\n    \"parent_email\",\n    \"original_date\",\n    \"original_time\",\n    \"requested_date\",\n    \"requested_time\",\n    \"reason\",\n    \"request_type\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        208
+      ],
+      "id": "4ad6305b-65ce-476c-9c1c-4558891ee22b",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "mano36713@gmail.com",
+          "mode": "id"
+        },
+        "limit": 5,
+        "timeMin": "={{ $('Convert Parent Time to Dubai Time').item.json.original_search_start_dubai }}",
+        "timeMax": "={{ $('Convert Parent Time to Dubai Time').item.json.original_search_end_dubai }}",
+        "options": {
+          "query": "={{ $('Convert Parent Time to Dubai Time').item.json.student_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1664,
+        -16
+      ],
+      "id": "11de600f-62f3-4bb4-a8bd-ceb4905a533d",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "AlS9vqI0Va6i6lpb",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "mano36713@gmail.com",
+          "mode": "id"
+        },
+        "timeMin": "={{ $json.requested_start_datetime }}",
+        "timeMax": "={{ $json.requested_end_datetime }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2096,
+        -16
+      ],
+      "id": "aba3168d-fa83-4375-8048-a12366bd58bf",
+      "name": "Get availability in a calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "AlS9vqI0Va6i6lpb",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1e43e58-3ce7-4eed-9ec0-fa570f52932e",
+              "name": "original_event_start",
+              "value": "={{ $json.start.dateTime }}",
+              "type": "string"
+            },
+            {
+              "id": "0d0a4b24-753a-425c-9372-b225a78a67f4",
+              "name": "original_event_end",
+              "value": "={{ $json.end.dateTime }}",
+              "type": "string"
+            },
+            {
+              "id": "d9aafdd4-f2b6-464d-b35a-26e3345a3c16",
+              "name": "duration_minutes",
+              "value": "={{ DateTime.fromISO($json.end.dateTime).diff(DateTime.fromISO($json.start.dateTime), 'minutes').minutes }}",
+              "type": "string"
+            },
+            {
+              "id": "7417abfc-36fa-41d7-8caf-3d6aeaca4195",
+              "name": "requested_start_datetime",
+              "value": "={{ $('Convert Parent Time to Dubai Time').item.json.requested_start_dubai }}",
+              "type": "string"
+            },
+            {
+              "id": "f0cfd36e-ff39-4a86-acf5-5cf3f1164bff",
+              "name": "requested_end_datetime",
+              "value": "={{ \nDateTime\n  .fromISO($('Convert Parent Time to Dubai Time').item.json.requested_start_dubai)\n  .setZone('Asia/Dubai')\n  .plus({\n    minutes:\n      DateTime\n        .fromISO($json.end.dateTime)\n        .diff(\n          DateTime.fromISO($json.start.dateTime),\n          'minutes'\n        ).minutes\n  })\n  .toISO()\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1888,
+        -16
+      ],
+      "id": "85d2183a-566f-4750-9c9d-00a72531b895",
+      "name": "Calculate requested time"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "70e5a0a5-a65f-4e87-b32e-80c8e1b9ec12",
+              "name": "student_name",
+              "value": "={{ $('Convert Parent Time to Dubai Time').item.json.student_name }}",
+              "type": "string"
+            },
+            {
+              "id": "03586eed-790e-4f2e-8bfe-9ddbe80d2fb8",
+              "name": "parent_email",
+              "value": "={{ $('Convert Parent Time to Dubai Time').item.json.parent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "2b3ec917-a840-45b9-84b9-282ea2545a83",
+              "name": "parent_timezone",
+              "value": "={{ $('Convert Parent Time to Dubai Time').item.json.parent_timezone }}",
+              "type": "string"
+            },
+            {
+              "id": "6248d0a9-2b8f-4dd6-b843-0914b14ede91",
+              "name": "original_event_start",
+              "value": "={{ $('Calculate requested time').item.json.original_event_start }}",
+              "type": "string"
+            },
+            {
+              "id": "dcb39bee-f03a-4cd8-b891-b9a1da88b1be",
+              "name": "original_event_end",
+              "value": "={{ $('Calculate requested time').item.json.original_event_end }}",
+              "type": "string"
+            },
+            {
+              "id": "988034d9-81e9-4b0d-aa74-4072817eecc4",
+              "name": "requested_start_datetime",
+              "value": "={{ $('Calculate requested time').item.json.requested_start_datetime }}",
+              "type": "string"
+            },
+            {
+              "id": "38ee058a-f77d-4648-a5fb-f074bf695a17",
+              "name": "requested_end_datetime",
+              "value": "={{ $('Calculate requested time').item.json.requested_end_datetime }}",
+              "type": "string"
+            },
+            {
+              "id": "4a8644dd-0de2-45aa-9c54-c31877075318",
+              "name": "duration_minutes",
+              "value": "={{ $('Calculate requested time').item.json.duration_minutes }}",
+              "type": "number"
+            },
+            {
+              "id": "8511e5e9-2f09-479d-abe3-c9f15922d148",
+              "name": "available",
+              "value": "={{ $json.available }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ebab2274-08a9-4a4a-85a8-5724d540a75f",
+              "name": "gmail_message_id",
+              "value": "={{ $('Get a message').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2571b127-d97f-4a12-8439-e27307f4f990",
+              "name": "gmail_thread_id",
+              "value": "={{ $('Get a message').item.json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "d6482c41-c041-4ddf-8b0d-68d1d75aaa56",
+              "name": "original_subject",
+              "value": "={{ $('Get a message').item.json.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2288,
+        -16
+      ],
+      "id": "72c30bf5-0677-40eb-8be3-8d6d2cf73bd1",
+      "name": "Build Approval Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "Approve reschedule",
+                    "rightValue": "={{ $json.Decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4ac08bcf-2c1d-4baf-8652-a3e55ce8fd5b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approve reschedule"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c75d2c8c-09b4-470c-9a45-32eb690cb4e8",
+                    "leftValue": "Decline and offer alternative",
+                    "rightValue": "={{ $json.Decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Decline and offer alternatives"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f9a5bd6c-4efa-491e-87f4-281e9bea0bcf",
+                    "leftValue": "Review manually",
+                    "rightValue": "={{ $json.Decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Review manually"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2704,
+        -32
+      ],
+      "id": "ac63e2bb-5e65-4363-8a6d-434c62997863",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3360,
+        -608
+      ],
+      "id": "a228cb61-9a70-47e3-85a4-7cb0b2dcbf0d",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zw56aFZ0wQl80Ei3",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "686b56e4-9d56-4ec0-9deb-28a035ae5265",
+              "leftValue": "={{ $json.output.is_schedule_change }}",
+              "rightValue": "={{ $json.output.is_schedule_change }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        752,
+        0
+      ],
+      "id": "85462dae-b416-41a6-b3a9-8cf8a927e1dc",
+      "name": "IF: Schedule Change? "
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this tutoring-related email.\n\nCURRENT DATE AND TIME:\n{{ $now.setZone('Asia/Dubai').toISO() }}\n\nSUBJECT:\n{{ $json.Subject }}\n\nSENDER:\n{{ $json.From }}\n\nEMAIL BODY:\n{{ $json.snippet }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an email classification and information extraction assistant for my tutoring business.\n\nAnalyze the complete email context provided to you, including the subject, sender, and email body.\n\nYour job is ONLY to classify the email and extract information stated by the parent. Do not perform scheduling decisions, calendar checks, or timezone conversions.\n\nYour tasks are:\n\n1. Determine whether the email is requesting a change to an existing scheduled tutoring session.\n\n2. Extract the student's name. The student's name may appear in:\n   - the email subject\n   - the email body\n   - previous email context if provided\n\n3. Extract the sender's email address from the sender information.\n\n4. If it is a schedule-change request, extract:\n   - original date/day\n   - original time\n   - requested date/day\n   - requested time\n   - reason for the change, if provided\n\n5. If the email is not a schedule-change request, identify what type of tutoring-related request it contains.\n\n6. Do not assume or invent information. If information is not explicitly available, return null.\n\n7. Preserve dates and times as expressed by the parent.\n\nExamples:\n- \"today\" → \"today\"\n- \"tomorrow\" → \"tomorrow\"\n- \"Wednesday\" → \"Wednesday\"\n- \"next Wednesday\" → \"next Wednesday\"\n- \"5 pm\" → \"5 pm\"\n\nDo not convert these values into another timezone.\n\n8. Do not assume that a time stated by the parent is in the tutor's timezone. The workflow will identify the parent's configured timezone separately and perform timezone conversion after this extraction step.\n\n9. Do not generate ISO 8601 timestamps.\n\nDo not calculate:\n- original_start_datetime\n- requested_start_datetime\n- requested_end_datetime\n\nThe workflow will calculate these values later using the parent's configured timezone and the actual tutoring-session duration.\n\n10. Do not calculate or assume the duration of the tutoring session. The workflow will retrieve the original session from Google Calendar and determine its actual duration.\n\n11. Do not determine whether the requested time is available. Google Calendar will perform the availability check later in the workflow.\n\n12. Do not respond to the parent. Only analyze the email.\n\n13. is_schedule_change must be a Boolean.\n\nReturn true only when the parent is requesting a change to the date or time of an existing tutoring session.\n\nOtherwise return false.\n\nExamples:\n\n\"Can we move Sarah's lesson from Wednesday at 5 PM to Thursday at 6 PM?\"\n→ is_schedule_change: true\n\n\"Can you send Sarah's homework?\"\n→ is_schedule_change: false\n\n\"Sarah won't be able to attend today.\"\n→ is_schedule_change: false unless the parent is explicitly requesting another date or time.\n\n14. If the parent requests a schedule change but does not provide enough information to identify either the existing session or the requested new time, still classify the email as a schedule change, but return the missing fields as null.\n\nExample:\n\n\"Can we move Sarah's lesson to sometime in the afternoon?\"\n\n→ is_schedule_change: true\n→ requested_date: null if no date is provided\n→ requested_time: null because \"afternoon\" is not a specific time\n\nDo not choose a time on the parent's behalf.\n\n15. Follow the output format provided by the Structured Output Parser exactly."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        0
+      ],
+      "id": "57bcc2c3-dcb1-40bb-8a85-6e4d74f58d33",
+      "name": "Extract fields"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "2TrUrxLTWfARMDoj",
+          "mode": "list",
+          "cachedResultName": "Parent's Time Zones",
+          "cachedResultUrl": "/projects/oGplOC4zEF7EynWC/datatables/2TrUrxLTWfARMDoj"
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        -16
+      ],
+      "id": "1acbc495-269f-4b10-8fcf-a07cc69a73a8",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1495402a-dbb2-4d5c-a410-f1c01f88c82e",
+              "name": "parent_timezone",
+              "value": "={{ $json.parent_timezone }}",
+              "type": "string"
+            },
+            {
+              "id": "e566b2aa-49e5-41fa-b173-9846e270c4df",
+              "name": "student_name",
+              "value": "={{ $json.student_name }}",
+              "type": "string"
+            },
+            {
+              "id": "34553238-9574-40f0-9219-7cad5ee10cb5",
+              "name": "parent_email",
+              "value": "={{ $json.parent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "64d059bc-1257-471a-b05f-5b9ca9953b5a",
+              "name": "output.original_date",
+              "value": "={{ $('IF: Schedule Change? ').item.json.output.original_date }}",
+              "type": "string"
+            },
+            {
+              "id": "ba62473b-2b58-4e06-b1cb-689396b075ca",
+              "name": "output.original_time",
+              "value": "={{ $('IF: Schedule Change? ').item.json.output.original_time }}",
+              "type": "string"
+            },
+            {
+              "id": "7b38968d-6d41-46ff-a849-f9b134b0edc5",
+              "name": "output.requested_date",
+              "value": "={{ $('IF: Schedule Change? ').item.json.output.requested_date }}",
+              "type": "string"
+            },
+            {
+              "id": "c386410d-1ba5-46e7-b9de-3eb69d801364",
+              "name": "output.requested_time",
+              "value": "={{ $('IF: Schedule Change? ').item.json.output.requested_time }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1200,
+        -16
+      ],
+      "id": "620a219d-36d6-4fd9-a039-ebf14363f1a9",
+      "name": "Resolve Parent Datetimes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json;\n\nconst parentZone = input.parent_timezone;\nconst tutorZone = 'Asia/Dubai';\n\n// LLM extraction is nested inside \"output\"\nconst extracted = input.output;\n\n// -----------------------------\n// Normalize written number words\n// -----------------------------\nfunction normalizeNumberWords(text) {\n  if (!text) return null;\n\n  const numbers = {\n    one: '1',\n    two: '2',\n    three: '3',\n    four: '4',\n    five: '5',\n    six: '6',\n    seven: '7',\n    eight: '8',\n    nine: '9',\n    ten: '10',\n    eleven: '11',\n    twelve: '12'\n  };\n\n  let result = text.toLowerCase().trim();\n\n  for (const [word, number] of Object.entries(numbers)) {\n    result = result.replace(\n      new RegExp(`\\\\b${word}\\\\b`, 'g'),\n      number\n    );\n  }\n\n  // Basic support for noon/midnight\n  if (result === 'noon') {\n    return '12:00 pm';\n  }\n\n  if (result === 'midnight') {\n    return '12:00 am';\n  }\n\n  return result;\n}\n\n// -----------------------------\n// Parse a parent-local time\n// -----------------------------\nfunction parseTime(timeText) {\n  if (!timeText) return null;\n\n  const cleaned = normalizeNumberWords(timeText);\n\n  const formats = [\n    'h a',      // 5 pm\n    'h:mm a',   // 5:30 pm\n    'ha',       // 5pm\n    'h:mma',    // 5:30pm\n    'HH:mm'     // 17:30\n  ];\n\n  for (const format of formats) {\n    const parsed = DateTime.fromFormat(cleaned, format, {\n      zone: parentZone,\n      locale: 'en'\n    });\n\n    if (parsed.isValid) {\n      return {\n        hour: parsed.hour,\n        minute: parsed.minute\n      };\n    }\n  }\n\n  return null;\n}\n\n// -----------------------------\n// Normalize weekday wording\n// \"sundays\" -> \"sunday\"\n// -----------------------------\nfunction normalizeDateText(dateText) {\n  if (!dateText) return null;\n\n  let text = dateText.trim().toLowerCase();\n\n  const validWeekdays = [\n    'monday',\n    'tuesday',\n    'wednesday',\n    'thursday',\n    'friday',\n    'saturday',\n    'sunday'\n  ];\n\n  if (text.endsWith('s')) {\n    const singular = text.slice(0, -1);\n\n    if (validWeekdays.includes(singular)) {\n      text = singular;\n    }\n  }\n\n  return text;\n}\n\n// -----------------------------\n// Resolve relative date in\n// parent's timezone\n// -----------------------------\nfunction resolveDate(dateText, zone) {\n  if (!dateText) return null;\n\n  const text = normalizeDateText(dateText);\n  const now = DateTime.now().setZone(zone).startOf('day');\n\n  if (text === 'today') {\n    return now;\n  }\n\n  if (text === 'tomorrow') {\n    return now.plus({ days: 1 });\n  }\n\n  const weekdays = {\n    monday: 1,\n    tuesday: 2,\n    wednesday: 3,\n    thursday: 4,\n    friday: 5,\n    saturday: 6,\n    sunday: 7\n  };\n\n  let weekdayText = text;\n  let forceNextWeek = false;\n\n  if (text.startsWith('next ')) {\n    weekdayText = text.replace('next ', '').trim();\n    forceNextWeek = true;\n  }\n\n  if (weekdays[weekdayText]) {\n    const targetWeekday = weekdays[weekdayText];\n\n    let daysAhead =\n      (targetWeekday - now.weekday + 7) % 7;\n\n    // Plain weekday means next occurrence.\n    // If today is that weekday, move to next week.\n    if (daysAhead === 0) {\n      daysAhead = 7;\n    }\n\n    // \"next Wednesday\" explicitly pushes it\n    // into the following week.\n    if (forceNextWeek && daysAhead < 7) {\n      daysAhead += 7;\n    }\n\n    return now.plus({ days: daysAhead });\n  }\n\n  return null;\n}\n\n// -----------------------------\n// Build parent-local DateTime\n// when both date and time exist\n// -----------------------------\nfunction buildDateTime(dateText, timeText) {\n  const date = resolveDate(dateText, parentZone);\n  const time = parseTime(timeText);\n\n  if (!date || !time) {\n    return null;\n  }\n\n  return date.set({\n    hour: time.hour,\n    minute: time.minute,\n    second: 0,\n    millisecond: 0\n  });\n}\n\n// -----------------------------\n// Build original/requested times\n// -----------------------------\nconst originalParent = buildDateTime(\n  extracted.original_date,\n  extracted.original_time\n);\n\nconst requestedParent = buildDateTime(\n  extracted.requested_date,\n  extracted.requested_time\n);\n\n// -----------------------------\n// Whole-day search window for\n// original session when exact\n// original time is missing\n// -----------------------------\nconst originalDateOnly = resolveDate(\n  extracted.original_date,\n  parentZone\n);\n\nconst originalSearchStartParent = originalDateOnly\n  ? originalDateOnly.startOf('day')\n  : null;\n\nconst originalSearchEndParent = originalDateOnly\n  ? originalDateOnly.plus({ days: 1 }).startOf('day')\n  : null;\n\n// -----------------------------\n// Return normalized values\n// -----------------------------\nreturn [\n  {\n    json: {\n      ...input,\n\n      // Parent-local exact times\n      original_start_parent: originalParent\n        ? originalParent.toISO()\n        : null,\n\n      requested_start_parent: requestedParent\n        ? requestedParent.toISO()\n        : null,\n\n      // Dubai equivalents\n      original_start_dubai: originalParent\n        ? originalParent.setZone(tutorZone).toISO()\n        : null,\n\n      requested_start_dubai: requestedParent\n        ? requestedParent.setZone(tutorZone).toISO()\n        : null,\n\n      // Search window for original event\n      // Useful when original_time is null\n      original_search_start_parent: originalSearchStartParent\n        ? originalSearchStartParent.toISO()\n        : null,\n\n      original_search_end_parent: originalSearchEndParent\n        ? originalSearchEndParent.toISO()\n        : null,\n\n      original_search_start_dubai: originalSearchStartParent\n        ? originalSearchStartParent.setZone(tutorZone).toISO()\n        : null,\n\n      original_search_end_dubai: originalSearchEndParent\n        ? originalSearchEndParent.setZone(tutorZone).toISO()\n        : null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        -16
+      ],
+      "id": "43860f21-d924-4b05-94a5-7750cd7eb138",
+      "name": "Convert Parent Time to Dubai Time"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ba224857-2890-489e-836c-ff4319a57e25",
+              "name": "student_name",
+              "value": "={{ $('Build Approval Data').item.json.student_name }}",
+              "type": "string"
+            },
+            {
+              "id": "9f8967ea-67e8-40b8-8b6d-e8b9d0ee56a2",
+              "name": "parent_email",
+              "value": "={{ $('Build Approval Data').item.json.parent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "e861f99a-c44a-433c-895b-24bc741b9798",
+              "name": "timezone_label",
+              "value": "={{ $('Build Approval Data').item.json.parent_timezone }}",
+              "type": "string"
+            },
+            {
+              "id": "adff4928-4637-437f-9924-4d6412c38041",
+              "name": "gmail_message_id",
+              "value": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9118c9bc-f035-499c-806f-3cb4b185b78a",
+              "name": "gmail_thread_id",
+              "value": "={{ $('Build Approval Data').item.json.gmail_thread_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a72d8613-4c70-4afd-a298-62cc0ed2d772",
+              "name": "parent_requested_start",
+              "value": "={{ DateTime.fromISO($('Build Approval Data').item.json.requested_start_datetime)\n.setZone($('Build Approval Data').item.json.parent_timezone)\n.toFormat(\"cccc, dd LLLL yyyy 'at' h:mm a\") }}",
+              "type": "string"
+            },
+            {
+              "id": "15749199-1e1a-4060-ab06-55ec145c39a1",
+              "name": "parent_requested_end",
+              "value": "=- {{ DateTime.fromISO($('Build Approval Data').item.json.requested_start_datetime) .plus({ minutes: Number($('Build Approval Data').item.json.duration_minutes) }) .setZone($('Build Approval Data').item.json.parent_timezone) .toFormat(\"h:mm a\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        3120,
+        -464
+      ],
+      "id": "21244350-0c5e-4db1-ba11-13497e2705a4",
+      "name": "Prepare Parent Confirmation"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "mano36713@gmail.com",
+          "mode": "list",
+          "cachedResultName": "mano36713@gmail.com"
+        },
+        "eventId": "={{ $('Get many events').item.json.id }}",
+        "updateFields": {
+          "end": "={{ $('Build Approval Data').item.json.requested_end_datetime }}",
+          "start": "={{ $('Build Approval Data').item.json.requested_start_datetime }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2912,
+        -464
+      ],
+      "id": "e38d040d-b624-478e-a407-e488c59e68b6",
+      "name": "Reschedule Calendar Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "AlS9vqI0Va6i6lpb",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are drafting a tutoring schedule-change confirmation email to a student's parent.\n\nWrite a short, warm, natural email confirming that the requested schedule change has been approved.\n\nStudent:\n{{ $json.student_name }}\n\nApproved new session:\n{{ $json.parent_requested_start }}–{{ $json.parent_requested_end }} ({{ $json.timezone_label }})\n\nReason for schedule change:\n{{ $('Extract fields').item.json.output.reason }}\n\nOriginal email subject:\n{{ $('Get a message').item.json.Subject }}\n\nINSTRUCTIONS\n\n1. Generate a suitable subject line for the email.\n\n2. Start the email exactly with:\n\nHello,\n\nOf course, we can reschedule.\n\n3. Immediately after \"Of course, we can reschedule.\", clearly confirm the student's new session date and time.\n\nUse natural wording such as:\n\"Sarah's session is now on...\"\n\nAlways include the provided timezone label after the time.\n\nExample:\n\"Sarah's session is now scheduled for Thursday, 20 August 2026, from 5:00 PM to 5:45 PM (Perth time).\"\n\nDo not sound overly formal or robotic.\n\n4. The approved session time provided above has already been converted into the parent's local timezone.\n\nUse the provided date, start time, end time, and timezone label EXACTLY as the scheduling information for the email.\n\nDo not:\n- perform another timezone conversion\n- omit the timezone label\n- mention the tutor's timezone\n- change the supplied date or time\n- claim that a calendar, record, booking, or session has already been updated\n\n5. If a reason for the schedule change was provided, acknowledge it briefly and naturally where appropriate.\n\nExamples of appropriate responses:\n- Illness or feeling unwell → wish the student a speedy/swift recovery.\n- Camp, competition, performance, trip, event, or similar activity → wish the student well or say you hope they have a great time.\n- Exam or assessment → wish the student good luck.\n- Holiday or travel → wish them a safe/enjoyable trip where appropriate.\n\nDo not mechanically repeat the parent's reason.\n\nDo not make assumptions about the student's health, circumstances, or activities beyond what the parent actually stated.\n\nIf the reason is null, missing, unclear, or does not naturally require acknowledgement, do not add anything about it.\n\n6. Keep the email concise. It should normally be approximately 3–5 short paragraphs.\n\n7. Do not mention:\n- Google Calendar\n- calendars\n- AI\n- automation\n- workflows\n- internal scheduling systems\n\n8. Do not invent any information. Do not add generic filler statements that imply an action has already occurred.\n\nFor example, do NOT say:\n- \"I have updated my records.\"\n- \"I have updated the calendar.\"\n- \"The booking has been changed.\"\n- \"Everything has been updated.\"\n\nOnly confirm that the requested schedule change has been approved and state the approved new session time.\n\n9. End the email exactly with:\n\nKind regards,\nAmna Malik\n\nOUTPUT FORMAT\n\nReturn:\n\nSubject: [appropriate subject]\n\nHello,\n\nOf course, we can reschedule.\n\n[email body]\n\nKind regards,\nAmna Malik",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You draft tutoring emails on my behalf.  Write in a polite, concise, professional, friendly tone.  You are drafting a response to a parent whose tutoring schedule-change request has been approved.  Rules: - Confirm only the approved requested date and time. - Do not invent any information. - Do not mention AI, automation, calendars, or internal workflow details. - Do not send the email. - Return only the email body."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        3360,
+        -464
+      ],
+      "id": "b23a6b28-8b7a-4db5-9870-de84cc3a0b16",
+      "name": "Draft email"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Review Parent Email",
+        "formDescription": "=To: {{ $('Prepare Parent Confirmation').item.json.parent_email }}\n\nDraft email:{{ $json.text }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email Action",
+              "fieldType": "radio",
+              "defaultValue": "Edit Email",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Send Email"
+                  },
+                  {
+                    "option": "Edit Email"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3728,
+        -464
+      ],
+      "id": "6cb2beef-482e-41ea-bf63-c97c7eb33c9b",
+      "name": "Final Email Review",
+      "webhookId": "d93e4164-d614-42ea-8953-b59fc5902d2d"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Tutoring Schedule Change",
+        "formDescription": "=Schedule change for {{ $('Build Approval Data').item.json.student_name }}\n\nCurrent:\n{{ DateTime.fromISO($('Build Approval Data').item.json.original_event_start).setZone('Asia/Dubai').toFormat(\"ccc, dd LLL • h:mm a\") }}–{{ DateTime.fromISO($('Build Approval Data').item.json.original_event_end).setZone('Asia/Dubai').toFormat(\"h:mm a\") }}\n\nRequested:\n{{ DateTime.fromISO($('Build Approval Data').item.json.requested_start_datetime).setZone('Asia/Dubai').toFormat(\"ccc, dd LLL • h:mm a\") }}–{{ DateTime.fromISO($('Build Approval Data').item.json.requested_end_datetime).setZone('Asia/Dubai').toFormat(\"h:mm a\") }}\n\n{{ $('Build Approval Data').item.json.available ? \"✓ You are available at the requested time.\" : \"✕ You are not available at the requested time.\" }}\n\nTimes shown in Dubai time.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "radio",
+              "defaultValue": "Review manually",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve reschedule"
+                  },
+                  {
+                    "option": "Decline and offer alternative"
+                  },
+                  {
+                    "option": "Review manually"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2512,
+        -16
+      ],
+      "id": "2da860af-4a2e-407b-b0dc-4634902c6d71",
+      "name": "Take Action",
+      "webhookId": "aef6eb13-ff21-4f3f-b0f9-0b5fa0b4f401"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4352,
+        -592
+      ],
+      "id": "33e312ac-4327-4758-acb0-f4feb3315ae4",
+      "name": "Reply to the parent's email",
+      "webhookId": "24d727cc-b365-4917-b468-1d9b98a063fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Send Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c4a4fc14-7f67-410d-accd-6d0f7c9bfeeb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Send Email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "96ee50b2-5bf7-4532-9c10-65c2c3e56574",
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Edit Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Edit Email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3984,
+        -464
+      ],
+      "id": "837f70fa-d21e-4772-b172-95f8b029a70a",
+      "name": "Take action (send / cancel)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const draft = $('Draft email').item.json.text;\n\nconst lines = draft.split('\\n');\n\n// Remove the first line if it begins with \"Subject:\"\nif (lines.length > 0 && lines[0].trim().toLowerCase().startsWith('subject:')) {\n  lines.shift();\n\n  // Remove blank line immediately after the subject\n  while (lines.length > 0 && lines[0].trim() === '') {\n    lines.shift();\n  }\n}\n\nreturn [\n  {\n    json: {\n      message: lines.join('\\n').trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4160,
+        -592
+      ],
+      "id": "118a716f-f2a6-4e1e-bce7-86d758c78746",
+      "name": "Use the message drafted"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Edit Email",
+        "formDescription": "Edit the draft below, then submit it for final review.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Edited Email",
+              "fieldType": "textarea",
+              "defaultValue": "=",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4160,
+        -352
+      ],
+      "id": "4eed21a5-7fe2-48f5-b6e8-f481b30def2d",
+      "name": "Edit Parent Email",
+      "webhookId": "18ee2bf9-196b-4aa6-ba50-e29e254f74e0"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a12d1894-c93a-4fae-8610-4274ee597489",
+              "name": "Edited Email",
+              "value": "={{ $json[\"Edited Email\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4352,
+        -352
+      ],
+      "id": "3ff07623-5c5a-45de-bd69-4115be438e5b",
+      "name": "Use Edited Draft"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Review Edited Email",
+        "formDescription": "={{ $json[\"Edited Email\"] }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Actions",
+              "fieldType": "radio",
+              "defaultValue": "Cancel",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Send Email"
+                  },
+                  {
+                    "option": "Cancel"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4528,
+        -352
+      ],
+      "id": "28435c76-2c01-404e-9edf-b40c54cbc05b",
+      "name": "Review Edited Email",
+      "webhookId": "68bd3df2-8643-4585-95ae-f6d0f8b616cc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const draft = $('Use Edited Draft').item.json.text;\n\nconst lines = draft.split('\\n');\n\n// Remove the first line if it begins with \"Subject:\"\nif (lines.length > 0 && lines[0].trim().toLowerCase().startsWith('subject:')) {\n  lines.shift();\n\n  // Remove blank line immediately after the subject\n  while (lines.length > 0 && lines[0].trim() === '') {\n    lines.shift();\n  }\n}\n\nreturn [\n  {\n    json: {\n      message: lines.join('\\n').trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4704,
+        -352
+      ],
+      "id": "b41b74a1-8a92-424f-a30b-bd7db0208446",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4912,
+        -352
+      ],
+      "id": "468d18a8-c273-4bc7-9da6-491382b1f77d",
+      "name": "Reply to a message",
+      "webhookId": "67042c35-9323-4ba5-9f03-dfd7ce26862e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "mano36713@gmail.com",
+          "mode": "list",
+          "cachedResultName": "mano36713@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $('Build Approval Data').item.json.requested_start_datetime }}",
+        "timeMax": "={{ DateTime.fromISO($('Build Approval Data').item.json.requested_start_datetime).plus({ days: 7 }).toISO() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        3232,
+        -16
+      ],
+      "id": "9ff18e47-8deb-4b92-a87f-0f4cd497ed47",
+      "name": "Find nearby events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "AlS9vqI0Va6i6lpb",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// ---------- CONFIG ----------\nconst tutorZone = 'Asia/Dubai';\n\nconst weekdayStartHour = 15; // 3 PM\nconst weekdayEndHour = 20;   // 8 PM\n\nconst weekendStartHour = 10; // 10 AM\nconst weekendEndHour = 20;   // 8 PM\n\nconst slotStepMinutes = 30;\nconst maxAlternatives = 3;\n// ----------------------------\n\n// Pull request data from Build Approval Data\nconst approval = $('Build Approval Data').item.json;\n\nconst requestedStart = DateTime\n  .fromISO(approval.requested_start_datetime)\n  .setZone(tutorZone);\n\nconst durationMinutes = Number(approval.duration_minutes);\n\nconst parentTimezone = approval.parent_timezone;\n\n// Convert Calendar events into busy ranges\nconst busyRanges = items\n  .map(item => {\n    const start = item.json.start?.dateTime;\n    const end = item.json.end?.dateTime;\n\n    if (!start || !end) return null;\n\n    return {\n      start: DateTime.fromISO(start).setZone(tutorZone),\n      end: DateTime.fromISO(end).setZone(tutorZone),\n      summary: item.json.summary ?? ''\n    };\n  })\n  .filter(Boolean);\n\n// Check if proposed slot overlaps a busy event\nfunction overlapsBusy(slotStart, slotEnd) {\n  return busyRanges.some(event => {\n    return slotStart < event.end && slotEnd > event.start;\n  });\n}\n\n// Generate alternatives\nconst alternatives = [];\n\n// Start from requested day/time, but move forward in time.\n// Search for up to 7 calendar days.\nconst searchStartDay = requestedStart.startOf('day');\n\nfor (let dayOffset = 0; dayOffset < 7; dayOffset++) {\n  const day = searchStartDay.plus({ days: dayOffset });\n\n  // Luxon weekday: Mon = 1 ... Sun = 7\n  const isWeekend = day.weekday === 6 || day.weekday === 7;\n\n  const startHour = isWeekend\n    ? weekendStartHour\n    : weekdayStartHour;\n\n  const endHour = isWeekend\n    ? weekendEndHour\n    : weekdayEndHour;\n\n  let candidateStart = day.set({\n    hour: startHour,\n    minute: 0,\n    second: 0,\n    millisecond: 0\n  });\n\n  const dayBoundary = day.set({\n    hour: endHour,\n    minute: 0,\n    second: 0,\n    millisecond: 0\n  });\n\n  while (candidateStart.plus({ minutes: durationMinutes }) <= dayBoundary) {\n    const candidateEnd = candidateStart.plus({\n      minutes: durationMinutes\n    });\n\n    // Don't suggest the exact rejected slot\n    const isOriginalRequestedSlot =\n      candidateStart.toMillis() === requestedStart.toMillis();\n\n    // Don't suggest anything already in the past\n    const isFuture =\n      candidateStart > DateTime.now().setZone(tutorZone);\n\n    if (\n      !isOriginalRequestedSlot &&\n      isFuture &&\n      !overlapsBusy(candidateStart, candidateEnd)\n    ) {\n      const parentStart = candidateStart.setZone(parentTimezone);\n      const parentEnd = candidateEnd.setZone(parentTimezone);\n\n      alternatives.push({\n        dubai_start: candidateStart.toISO(),\n        dubai_end: candidateEnd.toISO(),\n\n        dubai_display:\n          `${candidateStart.toFormat(\"ccc, dd LLL • h:mm a\")}–` +\n          `${candidateEnd.toFormat(\"h:mm a\")}`,\n\n        parent_start: parentStart.toISO(),\n        parent_end: parentEnd.toISO(),\n\n        parent_display:\n          `${parentStart.toFormat(\"cccc, dd LLLL yyyy 'at' h:mm a\")}–` +\n          `${parentEnd.toFormat(\"h:mm a\")}`,\n\n        parent_timezone: parentTimezone\n      });\n\n      if (alternatives.length >= maxAlternatives) {\n        break;\n      }\n    }\n\n    candidateStart = candidateStart.plus({\n      minutes: slotStepMinutes\n    });\n  }\n\n  if (alternatives.length >= maxAlternatives) {\n    break;\n  }\n}\n\nreturn [\n  {\n    json: {\n      requested_start_datetime: approval.requested_start_datetime,\n      duration_minutes: durationMinutes,\n      parent_timezone: parentTimezone,\n      alternatives_found: alternatives.length,\n      alternatives\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3440,
+        -16
+      ],
+      "id": "174124ab-bd8f-47d9-bc82-177241009524",
+      "name": "Find alternative slots"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f23b6f46-edd2-45d9-91a6-0c46952f4a51",
+              "name": "student_name",
+              "value": "={{ $('Build Approval Data').item.json.student_name }}",
+              "type": "string"
+            },
+            {
+              "id": "6a355a62-8289-4615-bc1d-4c073f2905e9",
+              "name": "parent_email",
+              "value": "={{ $('Build Approval Data').item.json.parent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "21a493e3-415c-44da-bf42-2c01d2b75782",
+              "name": "parent_timezone",
+              "value": "={{ $('Build Approval Data').item.json.parent_timezone }}",
+              "type": "string"
+            },
+            {
+              "id": "9816daf4-6e41-4ba5-8ea3-0d4c8bf139a0",
+              "name": "output.reason",
+              "value": "={{ $('Extract fields').item.json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "7d9f9c07-dea2-4bd1-b1cf-091b7b14e73a",
+              "name": "original_subject",
+              "value": "={{ $('Build Approval Data').item.json.original_subject }}",
+              "type": "string"
+            },
+            {
+              "id": "9380dc2f-b89d-44ce-a1ba-85b221bdaa39",
+              "name": "alternatives",
+              "value": "={{ $json.alternatives.map((a, i) => `${i + 1}. ${a.parent_display}`).join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        3664,
+        -16
+      ],
+      "id": "9c89b380-4d29-4124-85d1-3fe1d32a71bd",
+      "name": "Prepare alternative email data"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3888,
+        176
+      ],
+      "id": "84e4b240-8e53-44a3-aeff-6edcf34c552a",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zw56aFZ0wQl80Ei3",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Draft a polite tutoring schedule-change email offering alternative times.\n\nStudent:\n{{ $('Prepare alternative email data').item.json.student_name }}\n\nRequested time could not be accepted.\n\nAvailable alternatives in the parent's local timezone:\n{{ $json.alternatives }}\n\nParent timezone:\n{{ $('Prepare alternative email data').item.json.parent_timezone }}\n\nReason for the requested change:\n{{ $json.output.reason }}\n\nOriginal email subject:\n{{ $json.original_subject }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are drafting a polite tutoring schedule-change email to a student's parent.  The parent's requested time has not been accepted.  Student: {{ $('Build Approval Data').item.json.student_name }}  Available alternative sessions in the parent's local timezone: {{ $json.alternative_options_text }}  Parent timezone:  {{ $('Build Approval Data').item.json.parent_timezone }} Reason for the requested change: {{ $('Extract fields').item.json.output.reason }} Instructions:  - Write a short, warm, natural email. - Start with: Hello,  - Politely explain that the requested time will not work. - Offer the available alternatives clearly. - Ask the parent to let me know which option works best. - If a reason was provided, acknowledge it naturally where appropriate. - Do not invent any additional availability. - Do not mention Google Calendar, AI, automation, or internal workflow details. - Use only the alternatives provided. - End exactly with:  Kind regards, Amna Malik  Generate a suitable subject line as the first line in this format:  Subject: {{ $('Build Approval Data').item.json.original_subject }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        3888,
+        -16
+      ],
+      "id": "07c37db1-270c-4a46-8b95-809fe51df9c3",
+      "name": "Alternative Draft"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Reivew Alternative Email",
+        "formDescription": "=To: {{ $('Prepare alternative email data').item.json.parent_email }}\n\nDraft email:\n\n{{ $('Alternative Draft').item.json.text }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email Action",
+              "fieldType": "radio",
+              "defaultValue": "Edit Email",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Send Email"
+                  },
+                  {
+                    "option": "Edit Email"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4256,
+        -16
+      ],
+      "id": "fe046c7d-bf30-43b5-b976-15c6607847a2",
+      "name": "Review Alternative Email",
+      "webhookId": "141bd37a-c1d9-479f-bfb6-14aa2a00b9ad"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Send Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "56a32018-c64b-4851-b186-98bebcf4c03a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Send Email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "191ece53-c95a-4957-a95c-f5620a19c843",
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Edit Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Edit Email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        4480,
+        -16
+      ],
+      "id": "5786bde1-9767-485e-8d74-9dd70ecbb953",
+      "name": "Alternative Email Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "const draft = $('Alternative Draft').item.json.text;\n\nconst lines = draft.split('\\n');\n\n// Remove \"Subject:\" because Gmail Reply already uses\n// the existing email thread\nif (\n  lines.length > 0 &&\n  lines[0].trim().toLowerCase().startsWith('subject:')\n) {\n  lines.shift();\n\n  // Remove blank lines after subject\n  while (lines.length > 0 && lines[0].trim() === '') {\n    lines.shift();\n  }\n}\n\nreturn [\n  {\n    json: {\n      message: lines.join('\\n').trim()\n    }\n  }\n];// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4704,
+        -112
+      ],
+      "id": "b3e026e7-80b8-4d60-8d87-5414a15e88f7",
+      "name": "Prepare Alternative Gmail Repy"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4928,
+        -112
+      ],
+      "id": "24fdfcec-0e5c-4836-8a5c-bd14cb4cf8dc",
+      "name": "Reply ",
+      "webhookId": "4ffb344b-65a3-41c0-9bd8-0aedd53676bc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Edit Alternative Email",
+        "formDescription": "Make any changes you want to the email below, then submit it.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Edited Email",
+              "fieldType": "textarea",
+              "defaultValue": "={{ $('Alternative Draft').item.json.text }}",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4704,
+        80
+      ],
+      "id": "e6d12055-fb89-4097-9e1a-572d54cc8209",
+      "name": "Edit Alternative Email",
+      "webhookId": "3b118f22-2c40-415e-a2bc-c87e8eb935a2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8f79c397-2862-428f-b8b8-c74c22fbcb43",
+              "name": "text",
+              "value": "={{ $json[\"Edited Email\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4928,
+        80
+      ],
+      "id": "295b8532-68a4-4cb7-ba7f-b64ccc046d91",
+      "name": "Use Edited Alternative Email"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Review Edited Alternative Email",
+        "formDescription": "=To: {{ $('Prepare alternative email data').item.json.parent_email }}\n\nEdited draft:\n\n{{ $json.text }}",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email Action",
+              "fieldType": "radio",
+              "defaultValue": "Cancel",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Send Email"
+                  },
+                  {
+                    "option": "Cancel"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5152,
+        80
+      ],
+      "id": "fabb16a9-ca83-4a4b-b6d5-b2ae8a0ec74c",
+      "name": "Review Edited Alternative Email",
+      "webhookId": "bd83e24b-e3de-43f1-81fc-dc5429833e6a"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Send Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5798cc5d-f698-4996-9aa7-206b129cd056"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Send Email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c7ddfffa-07be-46b2-83ea-8c1b6f90e040",
+                    "leftValue": "={{ $json[\"Email Action\"] }}",
+                    "rightValue": "Cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancel"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        5376,
+        80
+      ],
+      "id": "541f31b7-92bd-44ac-aaf4-2e8f803a61c4",
+      "name": "Action"
+    },
+    {
+      "parameters": {
+        "jsCode": "const draft = $('Use Edited Alternative Email').item.json.text;\n\nconst lines = draft.split('\\n');\n\nif (\n  lines.length > 0 &&\n  lines[0].trim().toLowerCase().startsWith('subject:')\n) {\n  lines.shift();\n\n  while (lines.length > 0 && lines[0].trim() === '') {\n    lines.shift();\n  }\n}\n\nreturn [\n  {\n    json: {\n      message: lines.join('\\n').trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        -16
+      ],
+      "id": "dd381506-9898-400e-8243-18e40e1c973a",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        5824,
+        -16
+      ],
+      "id": "761eb489-a8ed-43c7-92f5-0c5a2cbdc9b1",
+      "name": "Reply to a message1",
+      "webhookId": "d6fc7501-f612-461b-9bd2-3408b17d1001",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a38d8f3-071f-4c6b-be9e-19dff30a82cd",
+              "name": "status",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "0fbf82e2-74d8-4f65-b18a-edbbaf4f8868",
+              "name": "manual_review_requried",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "573efc7e-a58c-4b26-8253-4be5ebe51d8c",
+              "name": "student_name",
+              "value": "={{ $('Build Approval Data').item.json.student_name }}",
+              "type": "string"
+            },
+            {
+              "id": "db3a86c1-ecf5-4b92-b3da-dbf8d5b17502",
+              "name": "parent_email",
+              "value": "={{ $('Build Approval Data').item.json.parent_email }}",
+              "type": "string"
+            },
+            {
+              "id": "b22b14a8-804c-4bdb-8a21-f49397aba3c9",
+              "name": "gmail_message_id",
+              "value": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "d3f04ec6-3c32-4265-9d6f-9d71fb4da665",
+              "name": "original_subject",
+              "value": "={{ $('Build Approval Data').item.json.original_subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2928,
+        400
+      ],
+      "id": "0baa2cc7-eb53-4736-8579-0c768bf8bc60",
+      "name": "Manual Review Required"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "labelIds": [
+          "Label_1189276819354767280"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4576,
+        -592
+      ],
+      "id": "1ec3205c-c85e-4dcf-afda-fa410f98d5a6",
+      "name": "Add label to message",
+      "webhookId": "261a6a33-e37b-4625-817f-fe84bf8bd0b5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "labelIds": [
+          "Label_1189276819354767280"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        5136,
+        -352
+      ],
+      "id": "d9888edc-8883-49d4-a02e-c9a5b3ff013b",
+      "name": "Add label to message1",
+      "webhookId": "92bcd8ad-0024-4748-a797-5127f13285e0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "labelIds": [
+          "Label_1189276819354767280"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        5152,
+        -112
+      ],
+      "id": "d4c3ff1a-db7c-4c94-a525-1bf95124d43e",
+      "name": "Add label to message2",
+      "webhookId": "5d3c34b0-439e-46f8-9cf3-8d1af85b5323",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Build Approval Data').item.json.gmail_message_id }}",
+        "labelIds": [
+          "Label_1189276819354767280"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        6048,
+        -16
+      ],
+      "id": "45e5b8c9-0a16-4e0a-b884-e886bce1abdc",
+      "name": "Add label to message3",
+      "webhookId": "35016b7f-cc7e-4c88-91ab-acfa89b68429",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract fields",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Calculate requested time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate requested time": {
+      "main": [
+        [
+          {
+            "node": "Get availability in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get availability in a calendar": {
+      "main": [
+        [
+          {
+            "node": "Build Approval Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Approval Data": {
+      "main": [
+        [
+          {
+            "node": "Take Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find nearby events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manual Review Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Schedule Change? ": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract fields": {
+      "main": [
+        [
+          {
+            "node": "IF: Schedule Change? ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Resolve Parent Datetimes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Parent Datetimes": {
+      "main": [
+        [
+          {
+            "node": "Convert Parent Time to Dubai Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Parent Time to Dubai Time": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Parent Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Draft email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Prepare Parent Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft email": {
+      "main": [
+        [
+          {
+            "node": "Final Email Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take Action": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Email Review": {
+      "main": [
+        [
+          {
+            "node": "Take action (send / cancel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take action (send / cancel)": {
+      "main": [
+        [
+          {
+            "node": "Use the message drafted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Parent Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use the message drafted": {
+      "main": [
+        [
+          {
+            "node": "Reply to the parent's email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Parent Email": {
+      "main": [
+        [
+          {
+            "node": "Use Edited Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Edited Draft": {
+      "main": [
+        [
+          {
+            "node": "Review Edited Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Edited Email": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find nearby events": {
+      "main": [
+        [
+          {
+            "node": "Find alternative slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find alternative slots": {
+      "main": [
+        [
+          {
+            "node": "Prepare alternative email data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare alternative email data": {
+      "main": [
+        [
+          {
+            "node": "Alternative Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Alternative Draft",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alternative Draft": {
+      "main": [
+        [
+          {
+            "node": "Review Alternative Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Alternative Email": {
+      "main": [
+        [
+          {
+            "node": "Alternative Email Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alternative Email Decision": {
+      "main": [
+        [
+          {
+            "node": "Prepare Alternative Gmail Repy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Alternative Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Alternative Gmail Repy": {
+      "main": [
+        [
+          {
+            "node": "Reply ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Alternative Email": {
+      "main": [
+        [
+          {
+            "node": "Use Edited Alternative Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Edited Alternative Email": {
+      "main": [
+        [
+          {
+            "node": "Review Edited Alternative Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Edited Alternative Email": {
+      "main": [
+        [
+          {
+            "node": "Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to the parent's email": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message": {
+      "main": [
+        [
+          {
+            "node": "Add label to message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply ": {
+      "main": [
+        [
+          {
+            "node": "Add label to message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to a message1": {
+      "main": [
+        [
+          {
+            "node": "Add label to message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Dubai",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3374741c-b544-434b-be2d-7ea78bf389b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14c41e2d5278c87113f619fd4ad2fd069f577de06b1fb00b837bae3b50b28b24"
+  },
+  "nodeGroups": [],
+  "id": "IpWzVto9mSUJLUPP",
+  "tags": []
+}

@@ -1,0 +1,1280 @@
+{
+  "name": "Tutoring Session Monitoring Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "mano36713@gmail.com",
+          "mode": "id"
+        },
+        "timeMin": "={{ $now.minus({ minutes: 2 }).toISO() }}",
+        "timeMax": "={{ $now.plus({ minutes: 5 }).toISO() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f12e9ccd-9b1d-4f34-ab39-7bf1a5b8cdae",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "AlS9vqI0Va6i6lpb",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e78afd7d-0d6a-4e67-b88b-b3178e6aaae6",
+              "leftValue": "={{ $json.summary }}",
+              "rightValue": "Tutoring",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "632f0cb9-da1c-4c1f-868d-3f598d75ac17",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zoom.us/oauth/token",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "account_credentials"
+            },
+            {
+              "name": "account_id",
+              "value": "sHHaAJvoRLKo8PNQqYDqIA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "3dd2562b-c9fe-418f-9ae9-275a1c8a52de",
+      "name": "Get Zoom Access Token",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "8apmNanb2wECjIGk",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.zoom.us/v2/meetings/87462782035",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $('Get Zoom Access Token').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "d6532a02-6ce6-4fac-88ce-dfb5e631f309",
+      "name": "Get Zoom Meeting"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Tutoring Session Attendance",
+        "formDescription": "Confirm the student's attendance before monitoring continues.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Has the student joined the Zoom meeting?",
+              "fieldType": "radio",
+              "defaultValue": "No",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "9990c235-88f5-485f-bca7-4d16beb1eede",
+      "name": "Tutoring Session Attendance",
+      "webhookId": "e928b54a-4a20-47de-8e11-f6de2ebce430"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0e969e7d-05fa-4b60-a9e9-13c0a0b1b5fc",
+      "name": "Check if meeting is about to start"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1776,
+        96
+      ],
+      "id": "65d41dd2-824c-4718-a8a4-196001ceafe3",
+      "name": "Wait Until 5-Minute Check",
+      "webhookId": "5278cef7-30c1-4bde-93fb-03e58a3ba796"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "={{ 'from:' + $('Get row(s)').item.json.parent_email + ' after:' + Math.floor(new Date($('Filter').item.json.start.dateTime).getTime() / 1000) }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        96
+      ],
+      "id": "405c0947-5de5-42cb-aeac-0543c4b80dba",
+      "name": "Check Parent Response - 5 Min",
+      "webhookId": "70930c12-25a6-430f-88f1-d6cb084eaedc",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1b53d8e5-001f-4cfe-a152-a70d1bdc0424",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2224,
+        96
+      ],
+      "id": "5e70121a-53ae-4c57-b3f3-c135bcc125ed",
+      "name": "Parent Responded - 5 Min?"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Parent Response Detected",
+        "formDescription": "A response from the parent has been detected. Please check your email before taking further action. Session monitoring will stop.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Acknowledged?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        0
+      ],
+      "id": "fc4ed83e-4856-4584-9b13-47824b6d9e52",
+      "name": "Parent Response Detected",
+      "webhookId": "f7bbbbd0-b38d-403d-b603-3f4ea4d27db2"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "5-Minute Attendance Check",
+        "formDescription": "The student has not joined the scheduled tutoring session after approximately 5 minutes, and no parent response has been detected.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Has the student joined the Zoom meeting now?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        192
+      ],
+      "id": "220d186f-5e35-46ee-9b38-0e090287ca63",
+      "name": "5-Minute Attendance Check",
+      "webhookId": "58de1151-9aa7-4ea9-ac44-0893f9502c50"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "051e153c-e58b-4ed8-8265-bf04271e8fcd",
+              "leftValue": "={{ $json[\"Has the student joined the Zoom meeting?\"] }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        0
+      ],
+      "id": "41fce088-ddcc-4873-bb23-ac3a6791669c",
+      "name": "Has student joined action"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "539e938a-4be2-40ba-9f9e-5d6f28e179fe",
+              "leftValue": "={{ $json[\"Has the student joined the Zoom meeting now?\"] }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2672,
+        192
+      ],
+      "id": "64949bef-07cb-41ba-8a03-6b0c6f52f241",
+      "name": "Student Joined at 5 Min?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3120,
+        288
+      ],
+      "id": "72518f55-026a-4594-8df8-87371fa61206",
+      "name": "Wait Until 10-Minute Check",
+      "webhookId": "2b8fe5ba-3a03-4220-85ce-bbfac3a4dbf4"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "={{ 'from:' + $('Get row(s)').item.json.parent_email + ' after:' + Math.floor(new Date($('Filter').item.json.start.dateTime).getTime() / 1000) }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3344,
+        288
+      ],
+      "id": "283b62d4-a450-4120-972a-a37d823f4b92",
+      "name": "Check Parent Response - 10 Min",
+      "webhookId": "42cdec8b-b1f1-4e55-8163-b5251cefdc8f",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "af9f0009-e870-4bb5-b3ce-1cb8e45de205",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3568,
+        288
+      ],
+      "id": "4b14ec11-b7fc-4235-8cb6-bec88e04a653",
+      "name": "Parent Responded - 10 Min?"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Parent Response Detected",
+        "formDescription": "A response from the parent has been detected. Please check your email before taking further action. Session monitoring will stop.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Acknowledged?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3760,
+        176
+      ],
+      "id": "e1de10f7-023d-443e-be43-cffe55022e33",
+      "name": "Parent Response Detected1",
+      "webhookId": "f7bbbbd0-b38d-403d-b603-3f4ea4d27db2"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "10-Minute Attendance Check",
+        "formDescription": "The student has not joined the scheduled tutoring session after approximately 10 minutes, and no parent response has been detected.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Has the student joined the Zoom meeting now?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3792,
+        384
+      ],
+      "id": "fe063a22-adf4-4792-a422-54af8c27897f",
+      "name": "10-Minute Attendance Check",
+      "webhookId": "10d88428-98fe-4dfe-94f2-e5f44904bfb0"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "36c8c2ea-46fc-42d8-85e9-fffb6cd7c83b",
+              "leftValue": "={{ $json[\"Has the student joined the Zoom meeting now?\"] }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4016,
+        384
+      ],
+      "id": "041e237f-0530-4e9f-bc7d-605325e601a2",
+      "name": "Student Joined at 10 Min?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s)').item.json.parent_email }}",
+        "subject": "Tutoring session follow-up",
+        "emailType": "text",
+        "message": "=Hi,  \n\nI'm currently in the Zoom meeting for the scheduled tutoring session, but {{ $('Get row(s)').item.json.student_name }} hasn't joined yet.  \n\nJust checking in in case there are any connectionissues or delays. Hope everything is okay.   \n\nKind regards,  \nAmna Malik",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4240,
+        480
+      ],
+      "id": "86e1e7a0-04a3-4e20-9041-ff77f459bb95",
+      "name": "Parent Check-In - 10 Min",
+      "webhookId": "d280e40b-c7a8-477a-9068-1d1f121dd367",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4464,
+        480
+      ],
+      "id": "c796b8b1-868e-4db6-b216-cd1c3deb1c8f",
+      "name": "Wait Until 15-Minute Check",
+      "webhookId": "82cb2a89-53e0-4df7-911c-923ec42c1576"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "={{ 'from:' + $('Get row(s)').item.json.parent_email + ' after:' + Math.floor(new Date($('Filter').item.json.start.dateTime).getTime() / 1000) }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4688,
+        480
+      ],
+      "id": "24925e60-2107-4c38-8e83-0e0691ce25fd",
+      "name": "Check Parent Response - 15 Min",
+      "webhookId": "267fccc6-04ea-401a-b413-2d746989f045",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "32a75d2d-24ae-4cd2-8f32-07a0fd18c3d3",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4912,
+        480
+      ],
+      "id": "0aacf6e7-6b35-4e89-901d-7715fa409a46",
+      "name": "Parent Responded - 15 Min?"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Parent Response Detected",
+        "formDescription": "A response from the parent has been detected. Please check your email before taking further action. Session monitoring will stop.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Acknowledged?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5104,
+        384
+      ],
+      "id": "1d597c0b-eb5d-48eb-a4ee-daff5d29c920",
+      "name": "Parent Response Detected2",
+      "webhookId": "f7bbbbd0-b38d-403d-b603-3f4ea4d27db2"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "15-Minute Attendance Check",
+        "formDescription": "The student has not joined the scheduled tutoring session after approximately 15 minutes, and no parent response has been detected.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Has the student joined the Zoom meeting now?",
+              "fieldType": "radio",
+              "defaultValue": "Yes",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5104,
+        576
+      ],
+      "id": "594d8264-cf1a-4af6-a07a-8f657b4bc621",
+      "name": "15-Minute Attendance Check",
+      "webhookId": "3ad7c0da-8d1a-4775-b791-b8fd7dd2f9b8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2cd20187-c3db-4062-85f1-873e53e952a5",
+              "leftValue": "={{ $json[\"Has the student joined the Zoom meeting now?\"] }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5328,
+        576
+      ],
+      "id": "629f3b00-5513-48ae-b292-d38a5d312a4b",
+      "name": "Student Joined at 15 Min?"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Potential Tutoring No-Show",
+        "formDescription": "The student has not joined the Zoom meeting after approximately 15 minutes, and no parent response has been detected.\n\nReview the proposed action before any final communication is sent.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Action",
+              "fieldType": "radio",
+              "defaultValue": "Handle Manually",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve & Send No-Show Email"
+                  },
+                  {
+                    "option": "Handle Manually"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5552,
+        672
+      ],
+      "id": "23782a5d-2777-4489-9f87-ee4aff33a7e7",
+      "name": "No-Show Approval",
+      "webhookId": "a5379b3b-ef90-4993-b07a-aa702ac05d5b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Action }}",
+                    "rightValue": "Approve & Send No-Show Email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9caa963d-80ce-4653-bbdd-13320522f98b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approve & Send No-Show Email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "83bf6c83-1428-4426-b683-2b8a0cee5ab1",
+                    "leftValue": "={{ $json.Action }}",
+                    "rightValue": "Handle Manually",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Handle Manually"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        5776,
+        672
+      ],
+      "id": "daeffbed-3b09-4341-a2e6-a4c3d5914602",
+      "name": "No-Show Decision"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s)').item.json.parent_email }}",
+        "subject": "Tutoring session follow-up",
+        "emailType": "text",
+        "message": "=Hi,  \n\nI waited in the Zoom meeting for approximately 15 minutes for {{ $('Get row(s)').item.json.student_name }}, but they did not join the scheduled tutoring session.\n\nAccording to my stated tutoring policy, the session will be charged as no notice was given. A makeup session can be arranged within the next two weeks, subject to availability.\n\nPlease let me know if you would like to arrange one. Hope everything's okay.\n\nKind regards,  \nAmna Malik",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        5984,
+        560
+      ],
+      "id": "5f788dba-248c-4335-9cf0-30a651754765",
+      "name": "Tutoring session follow-up",
+      "webhookId": "97c97d13-1ff5-4044-9f08-f70549fc329b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "2TrUrxLTWfARMDoj",
+          "mode": "list",
+          "cachedResultName": "Parent's Time Zones",
+          "cachedResultUrl": "/projects/oGplOC4zEF7EynWC/datatables/2TrUrxLTWfARMDoj"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "student_name",
+              "keyValue": "={{ $json.summary.replace('Tutoring -', '').trim() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ca079840-6a81-4ead-8a71-d0354cdb761f",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s)').item.json.parent_email }}",
+        "subject": "Tutoring session check-in",
+        "emailType": "text",
+        "message": "=Hi,  \n\nI'm currently in the Zoom meeting for the scheduled tutoring session, but {{ $('Get row(s)').item.json.student_name }} hasn't joined yet.  \n\nJust checking in in case there are any connectio issues or delays. Hope everything is okay.  \n\nKind regards, \nAmna Malik",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2896,
+        288
+      ],
+      "id": "4f157c75-1257-48d4-ab4a-8e5d8896ebaa",
+      "name": "Parent Check-In - 5 Min",
+      "webhookId": "7c636422-671e-4bbe-823f-99abca2360ea",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "avROaAkjFTJ2mQ0S",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Zoom Access Token": {
+      "main": [
+        [
+          {
+            "node": "Get Zoom Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Zoom Meeting": {
+      "main": [
+        [
+          {
+            "node": "Tutoring Session Attendance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if meeting is about to start": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tutoring Session Attendance": {
+      "main": [
+        [
+          {
+            "node": "Has student joined action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 5-Minute Check": {
+      "main": [
+        [
+          {
+            "node": "Check Parent Response - 5 Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Parent Response - 5 Min": {
+      "main": [
+        [
+          {
+            "node": "Parent Responded - 5 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parent Responded - 5 Min?": {
+      "main": [
+        [
+          {
+            "node": "Parent Response Detected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5-Minute Attendance Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5-Minute Attendance Check": {
+      "main": [
+        [
+          {
+            "node": "Student Joined at 5 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has student joined action": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait Until 5-Minute Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Joined at 5 Min?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Parent Check-In - 5 Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 10-Minute Check": {
+      "main": [
+        [
+          {
+            "node": "Check Parent Response - 10 Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Parent Response - 10 Min": {
+      "main": [
+        [
+          {
+            "node": "Parent Responded - 10 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parent Responded - 10 Min?": {
+      "main": [
+        [
+          {
+            "node": "Parent Response Detected1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10-Minute Attendance Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10-Minute Attendance Check": {
+      "main": [
+        [
+          {
+            "node": "Student Joined at 10 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Joined at 10 Min?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Parent Check-In - 10 Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parent Check-In - 10 Min": {
+      "main": [
+        [
+          {
+            "node": "Wait Until 15-Minute Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 15-Minute Check": {
+      "main": [
+        [
+          {
+            "node": "Check Parent Response - 15 Min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Parent Response - 15 Min": {
+      "main": [
+        [
+          {
+            "node": "Parent Responded - 15 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parent Responded - 15 Min?": {
+      "main": [
+        [
+          {
+            "node": "Parent Response Detected2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "15-Minute Attendance Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15-Minute Attendance Check": {
+      "main": [
+        [
+          {
+            "node": "Student Joined at 15 Min?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Joined at 15 Min?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "No-Show Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No-Show Approval": {
+      "main": [
+        [
+          {
+            "node": "No-Show Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No-Show Decision": {
+      "main": [
+        [
+          {
+            "node": "Tutoring session follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Get Zoom Access Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parent Check-In - 5 Min": {
+      "main": [
+        [
+          {
+            "node": "Wait Until 10-Minute Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "48681b0b-2e41-4dcf-812e-b73fc9dc5743",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14c41e2d5278c87113f619fd4ad2fd069f577de06b1fb00b837bae3b50b28b24"
+  },
+  "nodeGroups": [],
+  "id": "WssqTVkuSRYtHLzS",
+  "tags": []
+}
